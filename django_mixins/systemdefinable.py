@@ -7,7 +7,7 @@ from .base import MixinBase
 
 class SystemDefinableMixin(MixinBase):
 
-    isSystem = fields.BooleanField()
+    isSystem = fields.BooleanField(default = None)
 
     @classmethod
     def _classPrepared(cls, model, **kwargs):
