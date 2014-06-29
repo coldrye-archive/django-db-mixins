@@ -79,7 +79,7 @@ class set_once(object):
             attrib = '_' + self._attrib
             if getattr(instance, attrib) is not None:
 
-                raise Exception("property '%s' can be set once only." % self._attrib)
+                raise AttributeError("property '%s' can be set once only." % self._attrib)
 
             result = setattr(instance, attrib, value)
 

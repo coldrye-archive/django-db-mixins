@@ -21,6 +21,7 @@ import datetime
 import warnings
 
 from django.test import TestCase
+from django.utils import timezone
 from django.utils.unittest import skipIf
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
@@ -38,71 +39,56 @@ class ModificationMixinTests(TestCase):
         self.assertIsNone(m.modifiedBy, msg = 'modifiedBy should not have been set.')
         self.assertIsNone(m.modifiedWhen, msg = 'modifiedWhen should not have been set.')
 
-    def test_must_set_modifiedBy_on_init_when_missing_and_modifiedWhen_is_available(self):
-
-        modifiedWhen = datetime.datetime.now()
-        m = ModificationMixinTestModel(1, modifiedWhen=modifiedWhen)
-        self.assertEquals(m.modifiedBy, AnonymousUser().username, msg = 'modifiedBy should be the anonymous user.')
-        self.assertEquals(m.modifiedWhen, modifiedWhen, msg = 'modifiedWhen should have been set to the specified value.')
-        self.assertIsInstance(m.modifiedWhen, datetime.datetime, msg = 'modifiedWhen should have been an instance of datetime.')
-
-    def test_must_set_modifiedBy_on_init_when_none_and_modifiedWhen_is_available(self):
-
-        modifiedWhen = datetime.datetime.now()
-        m = ModificationMixinTestModel(1, None, modifiedWhen=modifiedWhen)
-        self.assertEquals(m.modifiedBy, AnonymousUser().username, msg = 'modifiedBy should be the anonymous user.')
-        self.assertEquals(m.modifiedWhen, modifiedWhen, msg = 'modifiedWhen should have been set to the specified value.')
-        self.assertIsInstance(m.modifiedWhen, datetime.datetime, msg = 'modifiedWhen should have been an instance of datetime.')
-
-    def test_must_set_modifiedWhen_on_init_when_missing_and_modifiedBy_is_available(self):
-
-        m = ModificationMixinTestModel(1, AnonymousUser().username)
-        self.assertEquals(m.modifiedBy, AnonymousUser().username, msg = 'modifiedBy should be the anonymous user.')
-        self.assertIsNotNone(m.modifiedWhen, msg = 'modifiedWhen should have been set.')
-        self.assertIsInstance(m.modifiedWhen, datetime.datetime, msg = 'modifiedWhen should have been an instance of datetime.')
-
-    def test_must_set_modifiedWhen_on_init_when_none_and_modifiedBy_is_available(self):
-
-        m = ModificationMixinTestModel(1, AnonymousUser().username, None)
-        self.assertEquals(m.modifiedBy, AnonymousUser().username, msg = 'modifiedBy should be the anonymous user.')
-        self.assertIsNotNone(m.modifiedWhen, msg = 'modifiedWhen should have been set.')
-        self.assertIsInstance(m.modifiedWhen, datetime.datetime, msg = 'modifiedWhen should have been an instance of datetime.')
-
     def test_must_not_set_modification_fields_on_initial_save(self):
 
-        m = ModificationMixinTestModel()
-        m.save()
-        self.assertIsNone(m.modifiedBy, msg = 'modifiedBy should not have been set.')
-        self.assertIsNone(m.modifiedWhen, msg = 'modifiedWhen should not have been set.')
-
-    def test_must_set_modification_fields_on_save(self):
-
-        m = ModificationMixinTestModel()
-        m.save()
-        m.field = 'a'
-
+        # we will ignore timezone related warnings here
         with warnings.catch_warnings():
+
             warnings.simplefilter('ignore')
+
+            m = ModificationMixinTestModel()
             m.save()
 
-        self.assertEquals(m.modifiedBy, AnonymousUser().username, msg = 'modifiedBy should be the anonymous user.')
-        self.assertIsNotNone(m.modifiedWhen, msg = 'modifiedWhen should have been set.')
-        self.assertIsInstance(m.modifiedWhen, datetime.datetime, msg = 'modifiedWhen should have been an instance of datetime.')
+            self.assertIsNone(m.modifiedBy, msg = 'modifiedBy should not have been set.')
+            self.assertIsNone(m.modifiedWhen, msg = 'modifiedWhen should not have been set.')
+
+    def test_must_set_modification_fields_on_subsequent_save(self):
+
+        # we will ignore timezone related warnings here
+        with warnings.catch_warnings():
+
+            warnings.simplefilter('ignore')
+
+            m = ModificationMixinTestModel()
+            m.save()
+            m.field = 'a'
+            m.save()
+
+            self.assertEquals(m.modifiedBy, AnonymousUser().username, msg = 'modifiedBy should be the anonymous user.')
+            self.assertIsNotNone(m.modifiedWhen, msg = 'modifiedWhen should have been set.')
+            self.assertIsInstance(m.modifiedWhen, datetime.datetime, msg = 'modifiedWhen should have been an instance of datetime.')
 
     @skipIf(settings.USE_TZ==False, 'timezone support disabled')
-    def test_timezone_support(self):
+    def test_must_not_cause_warnings_on_enabled_timezone_support(self):
+
+        with warnings.catch_warnings(record=True) as w:
+
+            warnings.simplefilter('always')
+
+            m = ModificationMixinTestModel()
+            m.save()
+
+            if len(w) == 1:
+
+                self.fail(w[0])
+
+    @skipIf(settings.USE_TZ==False, 'timezone support disabled')
+    def test_must_use_aware(self):
 
         m = ModificationMixinTestModel()
         m.save()
         m.field = 'a'
+        m.save()
 
-        if settings.USE_TZ:
-
-            with warnings.catch_warnings(record=True) as w:
-
-                warnings.simplefilter('always')
-                m.save()
-                if len(w) == 1:
-
-                    self.fail(w[0])
+        self.assertTrue(timezone.is_aware(m.modifiedWhen), msg = 'modifiedWhen should have been timezone aware')
 

@@ -17,60 +17,66 @@
 #
 
 
-import datetime
-
 from django.db.models import fields
+from django.utils import timezone
 
 from .auth import CurrentUser
 from .base import MixinBase
 from .utils import set_once
 
 
-# TODO: timezone support
 class CreationMixin(MixinBase):
 
     createdBy = fields.TextField(default = None)
-    createdWhen = fields.DateTimeField(default = None)
+    createdWhen = fields.DateTimeField(default = None, null = False,
+                                       auto_now = False, auto_now_add = True)
 
     @classmethod
-    def _postInit(cls, model, instance=None, args=[], kwargs={}, **extraargs):
+    def _postInit(cls, model, instance=None, args=[],
+                  kwargs={}, **extraargs):
 
         instance._createdBy = instance.__dict__['createdBy']
         delattr(instance, 'createdBy')
         instance.createdBy = set_once('createdBy');
 
-        if instance._createdBy is None:
-
-            instance._createdBy = CurrentUser.username
-
         instance._createdWhen = instance.__dict__['createdWhen']
         delattr(instance, 'createdWhen')
         instance.createdWhen = set_once('createdWhen')
 
-        if instance._createdWhen is None:
+    @classmethod
+    def _preSave(cls, model, instance=None, raw=False, using=None,
+                 update_fields=None, **extraargs):
 
-            instance._createdWhen = datetime.datetime.now() 
+        if instance.createdBy is None:
+
+            instance.createdBy = CurrentUser.username
+
+        # createdWhen will be set automatically
 
 
 # TODO: time zone support
 class ModificationMixin(MixinBase):
 
     modifiedBy = fields.TextField(default = None, null = True)
-    modifiedWhen = fields.DateTimeField(default = None, null = True)
+
+    # we cannot rely on auto_now as it gets called for newly added
+    # models as well, making any differentiation between auto_now_add 
+    # and auto_now moot -> this seems to be an issue in Django's
+    # DateTimeField#pre_save
+    modifiedWhen = fields.DateTimeField(default = None, null = True,
+                                        auto_now = False, auto_now_add = False)
 
     @classmethod
-    def _postInit(cls, model, instance=None, args=tuple(), kwargs={}, **extraargs):
+    def _postInit(cls, model, instance=None, args=tuple(),
+                  kwargs={}, **extraargs):
 
-        if instance.modifiedBy is not None and instance.modifiedWhen is None:
-
-            instance.modifiedWhen = datetime.datetime.now()
-
-        elif instance.modifiedBy is None and instance.modifiedWhen is not None:
+        if instance.modifiedBy is None and instance.modifiedWhen is not None:
 
             instance.modifiedBy = CurrentUser.username
 
     @classmethod
-    def _preSave(cls, model, instance=None, raw=False, using=None, update_fields=None, **extraargs):
+    def _preSave(cls, model, instance=None, raw=False, using=None,
+                 update_fields=None, **extraargs):
 
         # assume that the instance exists if pk is set
         # FIXME:does not work with pk mapped to attribute other than 'id'
@@ -79,5 +85,5 @@ class ModificationMixin(MixinBase):
         if instance.id is not None:
 
             instance.modifiedBy = CurrentUser.username
-            instance.modifiedWhen = datetime.datetime.now()
+            instance.modifiedWhen = timezone.now()
 
