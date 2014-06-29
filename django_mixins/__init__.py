@@ -28,8 +28,7 @@ from django.db.models.signals import (class_prepared, pre_init, post_init,
 from .base import MixinBase, ModelBase
 
 __all__ = [
-    'CreationMixin', 'ModificationMixin', 'ModelRefMixin', 
-    'SystemDefinableMixin', 'MixinBase', 'ModelBase'
+    'CreationMixin', 'ModificationMixin', 'MixinBase', 'ModelBase'
 ]
 
 
@@ -133,7 +132,5 @@ def classPreparedReceiver(sender, **kwargs):
         _registerSignalReceivers(model)
 
 
-from .mixins import CreationMixin, ModificationMixin
-from .modelref import ModelRefMixin
-from .systemdefinable import SystemDefinableMixin
+from .models import CreationMixin, ModificationMixin
 

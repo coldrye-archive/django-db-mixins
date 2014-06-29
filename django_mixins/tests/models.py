@@ -60,8 +60,3 @@ class ModificationMixinTestModel(ModelBase, ModificationMixin):
 
     field = fields.TextField(default = None, null = True)
 
-
-class SystemDefinableMixinTestModel(ModelBase, SystemDefinableMixin):
-
-    field = fields.TextField(default = None, null = True)
-
