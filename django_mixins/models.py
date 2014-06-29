@@ -79,10 +79,7 @@ class ModificationMixin(MixinBase):
                  update_fields=None, **extraargs):
 
         # assume that the instance exists if pk is set
-        # FIXME:does not work with pk mapped to attribute other than 'id'
-        # FIXME:should check db if pk exists
-        #pk = instance._meta.pk
-        if instance.id is not None:
+        if instance.pk is not None:
 
             instance.modifiedBy = CurrentUser.username
             instance.modifiedWhen = timezone.now()
